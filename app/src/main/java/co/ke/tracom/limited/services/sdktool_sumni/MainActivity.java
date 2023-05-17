@@ -2,6 +2,8 @@ package co.ke.tracom.limited.services.sdktool_sumni;
 
 import static android.content.ContentValues.TAG;
 
+import static co.ke.tracom.limited.services.sdktool_sumni.reports.SunmiReports.reportTotalReports;
+
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
@@ -18,6 +20,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import co.ke.tracom.limited.services.sdktool_sumni.device.DeviceInformation;
 import ke.co.tracom.libsunmi.SunmiFunctions;
@@ -25,6 +29,7 @@ import ke.co.tracom.libsunmi.SunmiSDK;
 import ke.co.tracom.libsunmi.api.EmvConfig;
 import ke.co.tracom.libsunmi.api.TransactionType;
 import ke.co.tracom.libsunmi.card.EmvResult;
+import ke.co.tracom.libsunmi.db.SaveDate;
 import ke.co.tracom.libsunmi.emv.EMVAction;
 import ke.co.tracom.libsunmi.enums.CardType;
 import ke.co.tracom.libsunmi.enums.Transactions;
@@ -32,6 +37,8 @@ import ke.co.tracom.libsunmi.interfaces.CardStateEmitter;
 import ke.co.tracom.libsunmi.interfaces.EMVListener;
 import ke.co.tracom.libsunmi.interfaces.TransactionData;
 import ke.co.tracom.libsunmi.printer.SunmiPrinter;
+import ke.co.tracom.libsunmi.reports.ReportsData;
+import ke.co.tracom.libsunmi.reports.TotalReportData;
 
 public class MainActivity extends AppCompatActivity {
     EMVAction emvAction = new EMVAction(this);
@@ -71,6 +78,8 @@ public class MainActivity extends AppCompatActivity {
                     case "pre-auth":
                         doPreAuth(payload);
                         break;
+                    case "totalReport":
+                        reportTotalReports(payload);
                 }
             }
         }
@@ -328,4 +337,5 @@ public class MainActivity extends AppCompatActivity {
         config.setTransactionType(transactionType);
         return  config;
     }
+
 }
