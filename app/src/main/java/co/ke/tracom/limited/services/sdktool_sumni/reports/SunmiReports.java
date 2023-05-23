@@ -1,39 +1,48 @@
 package co.ke.tracom.limited.services.sdktool_sumni.reports;
 
-import android.content.Intent;
+import android.content.Context;
 
-import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
-import java.util.ArrayList;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.List;
 
 import ke.co.tracom.libsunmi.db.SaveDate;
+import ke.co.tracom.libsunmi.reports.ReportsData;
 import ke.co.tracom.libsunmi.reports.TotalReportData;
 
 public class SunmiReports {
+    Context that;
+
+    public SunmiReports(Context that) {
+        this.that = that;
+    }
+
     //get the total reports from the database
-    public static void reportTotalReports(String payload){
-        List<TotalReportData> reports = new ArrayList<>();
-        reports= SaveDate.totalsReport(payload);
-        Gson gson = new Gson();
-        //run on a thread to delay for 1000mill then finish
-        List<TotalReportData> finalReports = reports;
+    public void statementReports(String payload) {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
                     Thread.sleep(1000);
-                    Intent in=new Intent();
-                    in.putExtra("resp",gson.toJson(finalReports.toString()));
+                    List<ReportsData> reports = null;
+                    try {
+                        reports = SaveDate.statementDetails(new JSONObject(payload).getString("profileID") , that.getApplicationContext());
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    System.out.println(reports);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
-        });
+        }).start();
     }
 
     //getting the statements report from the database
-    public static void getStatementsReport(String payload){
+    public static void getStatementsReport(String payload) {
 
     }
 

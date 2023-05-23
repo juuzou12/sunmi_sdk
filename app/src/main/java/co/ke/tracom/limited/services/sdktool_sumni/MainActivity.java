@@ -2,7 +2,6 @@ package co.ke.tracom.limited.services.sdktool_sumni;
 
 import static android.content.ContentValues.TAG;
 
-import static co.ke.tracom.limited.services.sdktool_sumni.reports.SunmiReports.reportTotalReports;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -24,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import co.ke.tracom.limited.services.sdktool_sumni.device.DeviceInformation;
+import co.ke.tracom.limited.services.sdktool_sumni.emvprocesses.EmvProcess;
 import ke.co.tracom.libsunmi.SunmiFunctions;
 import ke.co.tracom.libsunmi.SunmiSDK;
 import ke.co.tracom.libsunmi.api.EmvConfig;
@@ -60,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
         if ("apos.sdktool".equals(intent.getAction())) {
             action = getIntent().getStringExtra("action");
             payload = getIntent().getStringExtra("payload");
+            System.out.println(payload);
             if (action != null) {
                 switch (action) {
                     // add cases here
@@ -67,174 +68,27 @@ public class MainActivity extends AppCompatActivity {
                         getSerialNumber(intent);
                         break;
                     case "doEmv":
-                        onDoEmv(payload);
+                        try {
+                            new EmvProcess(this,emvAction,payload).emvMainTrigger();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
                         break;
                     case "doPrint":
                         doPrint(payload);
                         break;
                     case "doBalanceEnquiry":
-                        getBalance(payload);
+                        new EmvProcess(this,emvAction,payload).getBalance();
                         break;
-                    case "pre-auth":
-                        doPreAuth(payload);
+                    case "pre-auth-adjust":
+                        new EmvProcess(this,emvAction,payload).doPreAuthAdjust();
                         break;
-                    case "totalReport":
-                        reportTotalReports(payload);
                 }
             }
         }
     }
 
-    //get the balance of the card
-    public  void getBalance(String payload){
-        Context that = this;
-        Intent intent=new Intent();
-        Gson gson = new Gson();
-        try {
-            emvAction.start(that, new EMVListener() {
-                @Override
-                public void onEmvResult(EmvResult result) {
-                    //return to the ui application using intents
-                    intent.putExtra("resp", gson.toJson(result));
-                    setResult(RESULT_OK, intent);
-                    finish();
-                }
-            }, new CardStateEmitter() {
-                @Override
-                public void onInsertCard() {
-                    //introduce the lottie file for inserting / swapping / tapping cards
-                }
 
-                @Override
-                public void onCardInserted(CardType cardType) {
-                    //once the card is inserted
-                }
-
-                @Override
-                public void onProcessingEmv() {
-                    // whenever the card is processing the emv
-                }
-            },getEmvConfig(TransactionType.BALANCE_ENQUIRY,payload));
-        } catch (RemoteException | ISOException | IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    //do emv processing
-    private void onDoEmv(String payload) {
-        Context that = this;
-        Gson gson = new Gson();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Looper.prepare();
-                while (true) {
-                    if (SunmiSDK.app.emvOptV2 == null) {
-                        try {
-                            Thread.sleep(500);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        continue;
-                    }
-                    break;
-                }
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            Intent intent=new Intent();
-                            emvAction.start(that, new EMVListener() {
-                                @Override
-                                public void onEmvResult(EmvResult result) {
-                                    Log.e(TAG, "onEmvResult----------");
-                                    intent.putExtra("resp", gson.toJson(result));
-                                    setResult(RESULT_OK, intent);
-                                    finish();
-                                }
-                            }, new CardStateEmitter() {
-                                @Override
-                                public void onInsertCard() {
-                                    Log.e(TAG, "onInsertCard----------");
-                                }
-
-                                @Override
-                                public void onCardInserted(CardType cardType) {
-                                    Log.e(TAG, "onCardInserted----------");
-                                }
-
-                                @Override
-                                public void onProcessingEmv() {
-                                    Log.e(TAG, "onProcessingEmv----------");
-                                }
-                            },getEmvConfig(TransactionType.SALE,payload));
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
-                Looper.loop();
-            }
-        }).start();
-    }
-
-    //do pre-auth
-    private void doPreAuth(String payload){
-        Context that = this;
-        Gson gson = new Gson();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Looper.prepare();
-                while (true) {
-                    if (SunmiSDK.app.emvOptV2 == null) {
-                        try {
-                            Thread.sleep(500);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        continue;
-                    }
-                    break;
-                }
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            Intent intent=new Intent();
-                            emvAction.start(that, new EMVListener() {
-                                @Override
-                                public void onEmvResult(EmvResult result) {
-                                    Log.e(TAG, "onEmvResult----------");
-                                    intent.putExtra("resp", gson.toJson(result));
-                                    setResult(RESULT_OK, intent);
-                                    finish();
-                                }
-                            }, new CardStateEmitter() {
-                                @Override
-                                public void onInsertCard() {
-                                    Log.e(TAG, "onInsertCard----------");
-                                }
-
-                                @Override
-                                public void onCardInserted(CardType cardType) {
-                                    Log.e(TAG, "onCardInserted----------");
-                                }
-
-                                @Override
-                                public void onProcessingEmv() {
-                                    Log.e(TAG, "onProcessingEmv----------");
-                                }
-                            },getEmvConfig(TransactionType.PREAUTHORIZATION,payload));
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
-                Looper.loop();
-            }
-        }).start();
-    }
 
     //get the device serial number
     public void getSerialNumber(Intent intent) {
@@ -284,58 +138,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }).start();
 
-    }
-
-    //this function will return EmvConfig
-    static EmvConfig getEmvConfig(TransactionType transactionType,String payload){
-        EmvConfig config=new EmvConfig();
-        try {
-            config.setOtherAmount(payload != null ? new JSONObject(payload).getString("amount") : null);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        try {
-            config.setTid(payload != null ? new JSONObject(payload).getString("tid") : null);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        try {
-            config.setMid(payload != null ? new JSONObject(payload).getString("mid") : null);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        try {
-            config.setCardNumber(payload != null ? new JSONObject(payload).getString("cardNo") : null);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        try {
-            config.setExpDate(payload != null ? new JSONObject(payload).getString("expDate") : null);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        try {
-            config.setCvv(payload != null ? new JSONObject(payload).getString("cvv") : null);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        try {
-            config.setIp(payload != null ? new JSONObject(payload).getString("ip") : null);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        try {
-            config.setProfileId(payload != null ? new JSONObject(payload).getString("ip") : null);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        try {
-            config.setProfileId(payload != null ? new JSONObject(payload).getString("profileID") : null);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        config.setTransactionType(transactionType);
-        return  config;
     }
 
 }
