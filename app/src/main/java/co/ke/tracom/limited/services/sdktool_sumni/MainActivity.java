@@ -83,6 +83,12 @@ public class MainActivity extends AppCompatActivity {
                     case "pre-auth-adjust":
                         new EmvProcess(this,emvAction,payload).doPreAuthAdjust();
                         break;
+                    case "doTwoAmount":
+                        new EmvProcess(this,emvAction,payload).saleWithCashBack();
+                        break;
+                    case "Adjust":
+                        new EmvProcess(this,emvAction,payload).doAdjust();
+                        break;
                 }
             }
         }

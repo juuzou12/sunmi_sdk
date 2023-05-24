@@ -27,10 +27,12 @@ import ke.co.tracom.libsunmi.SunmiSDK;
 import ke.co.tracom.libsunmi.api.EmvConfig;
 import ke.co.tracom.libsunmi.api.TransactionType;
 import ke.co.tracom.libsunmi.api.transactionData.BalanceInquiry;
+import ke.co.tracom.libsunmi.api.transactionData.Cash;
 import ke.co.tracom.libsunmi.api.transactionData.OtherData;
 import ke.co.tracom.libsunmi.api.transactionData.PreAuthAdjust;
 import ke.co.tracom.libsunmi.api.transactionData.PreAuthData;
 import ke.co.tracom.libsunmi.api.transactionData.SaleData;
+import ke.co.tracom.libsunmi.api.transactionData.SaleWithCashbackData;
 import ke.co.tracom.libsunmi.card.EmvResult;
 import ke.co.tracom.libsunmi.emv.EMVAction;
 import ke.co.tracom.libsunmi.enums.CardType;
@@ -61,10 +63,19 @@ public class EmvProcess {
                 doPreAuth();
                 break;
             case "statementOfDay":
-                new SunmiReports(that).statementReports(payload);
+                new SunmiReports(that,payload).statementReports();
                 break;
             case "pre-auth-after-invoice":
                 preAuthAfterInvoice();
+                break;
+            case "cash-advance":
+                doCashAdvanced();
+                break;
+            case "Sale with cashback":
+                saleWithCashBack();
+                break;
+            case "Mini-statement":
+                new SunmiReports(that,payload).miniStatement(emv);
                 break;
             default:
                 break;
@@ -347,4 +358,166 @@ public class EmvProcess {
         return  config;
     }
 
+    //do cashAdvanced
+    public void doCashAdvanced() {
+        Gson gson = new Gson();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Looper.prepare();
+                while (true) {
+                    if (SunmiSDK.app.emvOptV2 == null) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+                    break;
+                }
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Intent intent = new Intent();
+                            emv.start(that, new EMVListener() {
+                                @Override
+                                public void onEmvResult(EmvResult result) {
+                                    Log.e(TAG, "onEmvResult----------");
+                                    intent.putExtra("resp", gson.toJson(result));
+                                    ((Activity) that).setResult(RESULT_OK, intent);
+                                    ((Activity) that).finish();
+                                }
+                            }, new CardStateEmitter() {
+                                @Override
+                                public void onInsertCard() {
+                                    Log.e(TAG, "onInsertCard----------");
+                                }
+
+                                @Override
+                                public void onCardInserted(CardType cardType) {
+                                    Log.e(TAG, "onCardInserted----------");
+                                }
+
+                                @Override
+                                public void onProcessingEmv() {
+                                    Log.e(TAG, "onProcessingEmv----------");
+                                }
+                            }, getEmvConfig(TransactionType.CASH,new Cash()));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                Looper.loop();
+            }
+        }).start();
+    }
+
+    //do sale with cash back
+    public void saleWithCashBack() {
+        Gson gson = new Gson();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Looper.prepare();
+                while (true) {
+                    if (SunmiSDK.app.emvOptV2 == null) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+                    break;
+                }
+                try {
+                    Intent intent = new Intent();
+
+                    SaleWithCashbackData saleWithCashbackData=new SaleWithCashbackData();
+                    saleWithCashbackData.setCashBackAmount(new JSONObject(payload).getString("amount"));
+                    saleWithCashbackData.setInitialAmount(new JSONObject(payload).getString("otherAmount"));
+
+                    if(new JSONObject(payload).getString("type").equals("Sale with tip")){
+                        emv.start(that, new EMVListener() {
+                            @Override
+                            public void onEmvResult(EmvResult result) {
+                                Log.e(TAG, "onEmvResult----------");
+                                intent.putExtra("resp", gson.toJson(result));
+                                ((Activity) that).setResult(RESULT_OK, intent);
+                                ((Activity) that).finish();
+                            }
+                        }, new CardStateEmitter() {
+                            @Override
+                            public void onInsertCard() {
+                                Log.e(TAG, "onInsertCard----------");
+                            }
+
+                            @Override
+                            public void onCardInserted(CardType cardType) {
+                                Log.e(TAG, "onCardInserted----------");
+                            }
+
+                            @Override
+                            public void onProcessingEmv() {
+                                Log.e(TAG, "onProcessingEmv----------");
+                            }
+                        }, getEmvConfig(TransactionType.CASHWITHTIP,saleWithCashbackData));
+                        return;
+                    }
+                    if(new JSONObject(payload).getString("type").equals("Sale with cashback")){
+                        emv.start(that, new EMVListener() {
+                            @Override
+                            public void onEmvResult(EmvResult result) {
+                                Log.e(TAG, "onEmvResult----------");
+                                intent.putExtra("resp", gson.toJson(result));
+                                ((Activity) that).setResult(RESULT_OK, intent);
+                                ((Activity) that).finish();
+                            }
+                        }, new CardStateEmitter() {
+                            @Override
+                            public void onInsertCard() {
+                                Log.e(TAG, "onInsertCard----------");
+                            }
+
+                            @Override
+                            public void onCardInserted(CardType cardType) {
+                                Log.e(TAG, "onCardInserted----------");
+                            }
+
+                            @Override
+                            public void onProcessingEmv() {
+                                Log.e(TAG, "onProcessingEmv----------");
+                            }
+                        }, getEmvConfig(TransactionType.CASHBACK,saleWithCashbackData));
+                    }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                Looper.loop();
+            }
+        }).start();
+    }
+
+    //do adjust of transaction
+    public void doAdjust() {
+        OtherData otherData = new OtherData(TransactionType.ADJUST);
+        try {
+            otherData.setInvoiceNumber(new JSONObject(payload).getString("invoiceNo") );
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        emv.queryBasedOnInvoices(new EMVListener() {
+            @Override
+            public void onEmvResult(EmvResult result) {
+                Log.d(LOG_TAG, result.toString());
+                intent.putExtra("resp", gson.toJson(result));
+                ((Activity) that).setResult(RESULT_OK, intent);
+                ((Activity) that).finish();
+            }
+        }, otherData);
+    }
 }
