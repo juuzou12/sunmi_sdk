@@ -24,6 +24,7 @@ import java.util.List;
 
 import co.ke.tracom.limited.services.sdktool_sumni.device.DeviceInformation;
 import co.ke.tracom.limited.services.sdktool_sumni.emvprocesses.EmvProcess;
+import co.ke.tracom.limited.services.sdktool_sumni.reports.SunmiReports;
 import ke.co.tracom.libsunmi.SunmiFunctions;
 import ke.co.tracom.libsunmi.SunmiSDK;
 import ke.co.tracom.libsunmi.api.EmvConfig;
@@ -89,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
                     case "Adjust":
                         new EmvProcess(this,emvAction,payload).doAdjust();
                         break;
+
                 }
             }
         }

@@ -26,6 +26,7 @@ import co.ke.tracom.limited.services.sdktool_sumni.reports.SunmiReports;
 import ke.co.tracom.libsunmi.SunmiSDK;
 import ke.co.tracom.libsunmi.api.EmvConfig;
 import ke.co.tracom.libsunmi.api.TransactionType;
+import ke.co.tracom.libsunmi.api.transactionData.Adjust;
 import ke.co.tracom.libsunmi.api.transactionData.BalanceInquiry;
 import ke.co.tracom.libsunmi.api.transactionData.Cash;
 import ke.co.tracom.libsunmi.api.transactionData.OtherData;
@@ -54,6 +55,7 @@ public class EmvProcess {
     Intent intent = new Intent();
     //this will be initialized as the emv process main function
     //it will contain a switch case that checks the transactions type then handle based on the parameters passed to it
+
     public void emvMainTrigger() throws JSONException {
         switch (new JSONObject(payload).getString("type")){
             case "sale":
@@ -76,6 +78,9 @@ public class EmvProcess {
                 break;
             case "Mini-statement":
                 new SunmiReports(that,payload).miniStatement(emv);
+                break;
+            case "adjust-after-invoice":
+                finishAdjust();
                 break;
             default:
                 break;
@@ -519,5 +524,62 @@ public class EmvProcess {
                 ((Activity) that).finish();
             }
         }, otherData);
+    }
+
+    //after you get the invoice details u can finish the transaction
+    public void finishAdjust(){
+        Gson gson = new Gson();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Looper.prepare();
+                while (true) {
+                    if (SunmiSDK.app.emvOptV2 == null) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+                    break;
+                }
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Intent intent = new Intent();
+                            emv.start(that, new EMVListener() {
+                                @Override
+                                public void onEmvResult(EmvResult result) {
+                                    Log.e(TAG, "onEmvResult----------");
+                                    intent.putExtra("resp", gson.toJson(result));
+                                    ((Activity) that).setResult(RESULT_OK, intent);
+                                    ((Activity) that).finish();
+                                }
+                            }, new CardStateEmitter() {
+                                @Override
+                                public void onInsertCard() {
+                                    Log.e(TAG, "onInsertCard----------");
+                                }
+
+                                @Override
+                                public void onCardInserted(CardType cardType) {
+                                    Log.e(TAG, "onCardInserted----------");
+                                }
+
+                                @Override
+                                public void onProcessingEmv() {
+                                    Log.e(TAG, "onProcessingEmv----------");
+                                }
+                            }, getEmvConfig(TransactionType.ADJUST,new Adjust()));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                Looper.loop();
+            }
+        }).start();
     }
 }

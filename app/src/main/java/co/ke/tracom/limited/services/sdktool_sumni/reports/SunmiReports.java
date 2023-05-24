@@ -86,6 +86,8 @@ public class SunmiReports {
                     public void run() {
                         try {
                             Intent intent = new Intent();
+                            Settlement settlement=new Settlement();
+                            settlement.setAmount(new JSONObject(payload).getString("amount") );
                             emv.start(that, new EMVListener() {
                                 @Override
                                 public void onEmvResult(EmvResult result) {
@@ -109,7 +111,7 @@ public class SunmiReports {
                                 public void onProcessingEmv() {
                                     Log.e(TAG, "onProcessingEmv----------");
                                 }
-                            }, getEmvConfig(TransactionType.MINI_STATEMENT,new Settlement()));
+                            }, getEmvConfig(TransactionType.MINI_STATEMENT,settlement));
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
