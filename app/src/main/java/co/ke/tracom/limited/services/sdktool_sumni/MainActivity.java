@@ -30,7 +30,6 @@ import ke.co.tracom.libsunmi.SunmiSDK;
 import ke.co.tracom.libsunmi.api.EmvConfig;
 import ke.co.tracom.libsunmi.api.TransactionType;
 import ke.co.tracom.libsunmi.card.EmvResult;
-import ke.co.tracom.libsunmi.db.SaveDate;
 import ke.co.tracom.libsunmi.emv.EMVAction;
 import ke.co.tracom.libsunmi.enums.CardType;
 import ke.co.tracom.libsunmi.enums.Transactions;

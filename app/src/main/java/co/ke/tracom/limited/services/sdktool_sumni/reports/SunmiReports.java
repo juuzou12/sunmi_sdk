@@ -25,7 +25,6 @@ import ke.co.tracom.libsunmi.api.TransactionType;
 import ke.co.tracom.libsunmi.api.transactionData.SaleData;
 import ke.co.tracom.libsunmi.api.transactionData.Settlement;
 import ke.co.tracom.libsunmi.card.EmvResult;
-import ke.co.tracom.libsunmi.db.SaveDate;
 import ke.co.tracom.libsunmi.emv.EMVAction;
 import ke.co.tracom.libsunmi.enums.CardType;
 import ke.co.tracom.libsunmi.interfaces.CardStateEmitter;
@@ -49,13 +48,6 @@ public class SunmiReports {
             public void run() {
                 try {
                     Thread.sleep(1000);
-                    List<ReportsData> reports = null;
-                    try {
-                        reports = SaveDate.statementDetails(new JSONObject(payload).getString("profileID") , that.getApplicationContext());
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                    System.out.println(reports);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
