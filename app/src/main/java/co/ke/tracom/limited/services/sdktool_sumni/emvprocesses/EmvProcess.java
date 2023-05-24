@@ -82,6 +82,9 @@ public class EmvProcess {
             case "adjust-after-invoice":
                 finishAdjust();
                 break;
+            case "Pre-authorize completion after":
+                preAuthorizeCompletionAfterInvoice();
+                break;
             default:
                 break;
         }
@@ -221,6 +224,8 @@ public class EmvProcess {
                     public void run() {
                         try {
                             Intent intent = new Intent();
+                            PreAuthAdjust preAuth=new PreAuthAdjust();
+                            preAuth.setAmount(new JSONObject(payload).getString("amount"));
                             emv.start(that, new EMVListener() {
                                 @Override
                                 public void onEmvResult(EmvResult result) {
@@ -244,7 +249,7 @@ public class EmvProcess {
                                 public void onProcessingEmv() {
                                     Log.e(TAG, "onProcessingEmv----------");
                                 }
-                            }, getEmvConfig(TransactionType.PREAUTHORIZATION_ADJUSTMENT,new PreAuthAdjust()));
+                            }, getEmvConfig(TransactionType.PREAUTHORIZATION_ADJUSTMENT,preAuth));
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -549,6 +554,8 @@ public class EmvProcess {
                     public void run() {
                         try {
                             Intent intent = new Intent();
+                            Adjust adjust=new Adjust();
+                            adjust.setAmount(new JSONObject(payload).getString("amount"));
                             emv.start(that, new EMVListener() {
                                 @Override
                                 public void onEmvResult(EmvResult result) {
@@ -572,7 +579,7 @@ public class EmvProcess {
                                 public void onProcessingEmv() {
                                     Log.e(TAG, "onProcessingEmv----------");
                                 }
-                            }, getEmvConfig(TransactionType.ADJUST,new Adjust()));
+                            }, getEmvConfig(TransactionType.ADJUST,adjust));
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -582,4 +589,84 @@ public class EmvProcess {
             }
         }).start();
     }
+
+    //Pre-authorize completion
+    public void preAuthorizeCompletion() {
+        OtherData otherData = new OtherData(TransactionType.PREAUTHORIZATION_COMPLETION_INQUIRY);
+        try {
+            otherData.setInvoiceNumber(new JSONObject(payload).getString("invoiceNo") );
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        emv.queryBasedOnInvoices(new EMVListener() {
+            @Override
+            public void onEmvResult(EmvResult result) {
+                Log.d(LOG_TAG, result.toString());
+                intent.putExtra("resp", gson.toJson(result));
+                ((Activity) that).setResult(RESULT_OK, intent);
+                ((Activity) that).finish();
+            }
+        }, otherData);
+    }
+
+    //after the invoice is returned to the ui
+    public void preAuthorizeCompletionAfterInvoice(){
+        Gson gson = new Gson();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Looper.prepare();
+                while (true) {
+                    if (SunmiSDK.app.emvOptV2 == null) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+                    break;
+                }
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Intent intent = new Intent();
+                            PreAuthAdjust preAuth=new PreAuthAdjust();
+                            preAuth.setAmount(new JSONObject(payload).getString("amount"));
+                            emv.start(that, new EMVListener() {
+                                @Override
+                                public void onEmvResult(EmvResult result) {
+                                    Log.e(TAG, "onEmvResult----------");
+                                    intent.putExtra("resp", gson.toJson(result));
+                                    ((Activity) that).setResult(RESULT_OK, intent);
+                                    ((Activity) that).finish();
+                                }
+                            }, new CardStateEmitter() {
+                                @Override
+                                public void onInsertCard() {
+                                    Log.e(TAG, "onInsertCard----------");
+                                }
+
+                                @Override
+                                public void onCardInserted(CardType cardType) {
+                                    Log.e(TAG, "onCardInserted----------");
+                                }
+
+                                @Override
+                                public void onProcessingEmv() {
+                                    Log.e(TAG, "onProcessingEmv----------");
+                                }
+                            }, getEmvConfig(TransactionType.PREAUTHORIZATION_COMPLETION,preAuth));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                Looper.loop();
+            }
+        }).start();
+    }
+
+
 }

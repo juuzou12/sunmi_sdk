@@ -122,6 +122,8 @@ public class SunmiReports {
         }).start();
     }
 
+    //get the list of manual settlement
+
     //this function will return EmvConfig
     public EmvConfig getEmvConfig(TransactionType transactionType, TransactionData transactionData){
         EmvConfig config=new EmvConfig();

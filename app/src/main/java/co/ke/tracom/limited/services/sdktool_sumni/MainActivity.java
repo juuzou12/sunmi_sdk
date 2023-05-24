@@ -90,7 +90,9 @@ public class MainActivity extends AppCompatActivity {
                     case "Adjust":
                         new EmvProcess(this,emvAction,payload).doAdjust();
                         break;
-
+                    case "pre-auth-completion":
+                        new EmvProcess(this,emvAction,payload).preAuthorizeCompletion();
+                        break;
                 }
             }
         }
