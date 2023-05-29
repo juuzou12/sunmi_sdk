@@ -36,9 +36,11 @@ import ke.co.tracom.libsunmi.reports.TotalReportData;
 public class SunmiReports {
     Context that;
     String payload;
-    public SunmiReports(Context that,String payload) {
+    EMVAction emv;
+    public SunmiReports(Context that,String payload,EMVAction emv) {
         this.that = that;
         this.payload = payload;
+        this.emv = emv;
     }
 
     //get the total reports from the database
@@ -56,7 +58,7 @@ public class SunmiReports {
     }
 
     //getting the statements report from the database
-    public void miniStatement(EMVAction emv) {
+    public void miniStatement() {
         Gson gson = new Gson();
         new Thread(new Runnable() {
             @Override
@@ -163,4 +165,64 @@ public class SunmiReports {
         config.setTransactionData(transactionData);
         return  config;
     }
+
+    //the total reports
+    public void getTotalReports() {
+        Gson gson = new Gson();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Looper.prepare();
+                while (true) {
+                    if (SunmiSDK.app.emvOptV2 == null) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+                    break;
+                }
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Intent intent = new Intent();
+                            TotalReportData totalReportData=new TotalReportData();
+                            emv.start(that, new EMVListener() {
+                                @Override
+                                public void onEmvResult(EmvResult result) {
+                                    Log.e(TAG, "onEmvResult----------");
+                                    intent.putExtra("resp", gson.toJson(result));
+                                    ((Activity) that).setResult(RESULT_OK, intent);
+                                    ((Activity) that).finish();
+                                }
+                            }, new CardStateEmitter() {
+                                @Override
+                                public void onInsertCard() {
+                                    Log.e(TAG, "onInsertCard----------");
+                                }
+
+                                @Override
+                                public void onCardInserted(CardType cardType) {
+                                    Log.e(TAG, "onCardInserted----------");
+                                }
+
+                                @Override
+                                public void onProcessingEmv() {
+                                    Log.e(TAG, "onProcessingEmv----------");
+                                }
+                            }, getEmvConfig(null,null));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                Looper.loop();
+            }
+        }).start();
+    }
+
+    //the statement of the day
 }

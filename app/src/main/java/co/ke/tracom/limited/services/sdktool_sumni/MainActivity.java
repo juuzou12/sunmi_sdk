@@ -92,6 +92,9 @@ public class MainActivity extends AppCompatActivity {
                     case "pre-auth-completion":
                         new EmvProcess(this,emvAction,payload).preAuthorizeCompletion();
                         break;
+                    case "Pre-authorize complete cancellation":
+                        new EmvProcess(this,emvAction,payload).preAuthorizeCompleteCancellation();
+                        break;
                 }
             }
         }

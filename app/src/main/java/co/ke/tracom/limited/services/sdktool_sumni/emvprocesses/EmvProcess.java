@@ -31,6 +31,7 @@ import ke.co.tracom.libsunmi.api.transactionData.BalanceInquiry;
 import ke.co.tracom.libsunmi.api.transactionData.Cash;
 import ke.co.tracom.libsunmi.api.transactionData.OtherData;
 import ke.co.tracom.libsunmi.api.transactionData.PreAuthAdjust;
+import ke.co.tracom.libsunmi.api.transactionData.PreAuthCompletionCancellation;
 import ke.co.tracom.libsunmi.api.transactionData.PreAuthData;
 import ke.co.tracom.libsunmi.api.transactionData.SaleData;
 import ke.co.tracom.libsunmi.api.transactionData.SaleWithCashbackData;
@@ -65,7 +66,7 @@ public class EmvProcess {
                 doPreAuth();
                 break;
             case "statementOfDay":
-                new SunmiReports(that,payload).statementReports();
+                new SunmiReports(that,payload,emv).statementReports();
                 break;
             case "pre-auth-after-invoice":
                 preAuthAfterInvoice();
@@ -77,13 +78,16 @@ public class EmvProcess {
                 saleWithCashBack();
                 break;
             case "Mini-statement":
-                new SunmiReports(that,payload).miniStatement(emv);
+                new SunmiReports(that,payload,emv).miniStatement();
                 break;
             case "adjust-after-invoice":
                 finishAdjust();
                 break;
             case "Pre-authorize completion after":
                 preAuthorizeCompletionAfterInvoice();
+                break;
+            case "totalReport":
+                new SunmiReports(that,payload,emv).getTotalReports();
                 break;
             default:
                 break;
@@ -668,5 +672,81 @@ public class EmvProcess {
         }).start();
     }
 
+    //Pre-authorize complete cancellation
+    public void preAuthorizeCompleteCancellation(){
+        OtherData otherData = new OtherData(TransactionType.PREAUTHORIZATION_COMPLETION_CANCELLETION);
+        try {
+            otherData.setRrn(new JSONObject(payload).getString("invoiceNo") );
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        emv.queryBasedOnInvoices(new EMVListener() {
+            @Override
+            public void onEmvResult(EmvResult result) {
+                Log.d(LOG_TAG, result.toString());
+                intent.putExtra("resp", gson.toJson(result));
+                ((Activity) that).setResult(RESULT_OK, intent);
+                ((Activity) that).finish();
+            }
+        }, otherData);
+    }
 
+    //Pre-authorize complete cancellation after rrn is valid
+    private void preAuthorizeCompleteCancellationAfter(){
+        Gson gson = new Gson();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Looper.prepare();
+                while (true) {
+                    if (SunmiSDK.app.emvOptV2 == null) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+                    break;
+                }
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Intent intent = new Intent();
+                            PreAuthCompletionCancellation preAuthCompletionCancellation=new PreAuthCompletionCancellation();
+                            preAuthCompletionCancellation.setAmount(new JSONObject(payload).getString("amount"));
+                            emv.start(that, new EMVListener() {
+                                @Override
+                                public void onEmvResult(EmvResult result) {
+                                    Log.e(TAG, "onEmvResult----------");
+                                    intent.putExtra("resp", gson.toJson(result));
+                                    ((Activity) that).setResult(RESULT_OK, intent);
+                                    ((Activity) that).finish();
+                                }
+                            }, new CardStateEmitter() {
+                                @Override
+                                public void onInsertCard() {
+                                    Log.e(TAG, "onInsertCard----------");
+                                }
+
+                                @Override
+                                public void onCardInserted(CardType cardType) {
+                                    Log.e(TAG, "onCardInserted----------");
+                                }
+
+                                @Override
+                                public void onProcessingEmv() {
+                                    Log.e(TAG, "onProcessingEmv----------");
+                                }
+                            }, getEmvConfig(TransactionType.PREAUTHORIZATION_COMPLETION_CANCELLETION,preAuthCompletionCancellation));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                Looper.loop();
+            }
+        }).start();
+    }
 }
