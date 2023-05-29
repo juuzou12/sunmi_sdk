@@ -25,6 +25,7 @@ import ke.co.tracom.libsunmi.api.TransactionType;
 import ke.co.tracom.libsunmi.api.transactionData.SaleData;
 import ke.co.tracom.libsunmi.api.transactionData.Settlement;
 import ke.co.tracom.libsunmi.card.EmvResult;
+import ke.co.tracom.libsunmi.db.Reports;
 import ke.co.tracom.libsunmi.emv.EMVAction;
 import ke.co.tracom.libsunmi.enums.CardType;
 import ke.co.tracom.libsunmi.interfaces.CardStateEmitter;
@@ -190,7 +191,7 @@ public class SunmiReports {
                         try {
                             Intent intent = new Intent();
                             TotalReportData totalReportData=new TotalReportData();
-                            emv.start(that, new EMVListener() {
+                            Reports.totalReport(new EMVListener() {
                                 @Override
                                 public void onEmvResult(EmvResult result) {
                                     Log.e(TAG, "onEmvResult----------");
@@ -198,22 +199,7 @@ public class SunmiReports {
                                     ((Activity) that).setResult(RESULT_OK, intent);
                                     ((Activity) that).finish();
                                 }
-                            }, new CardStateEmitter() {
-                                @Override
-                                public void onInsertCard() {
-                                    Log.e(TAG, "onInsertCard----------");
-                                }
-
-                                @Override
-                                public void onCardInserted(CardType cardType) {
-                                    Log.e(TAG, "onCardInserted----------");
-                                }
-
-                                @Override
-                                public void onProcessingEmv() {
-                                    Log.e(TAG, "onProcessingEmv----------");
-                                }
-                            }, getEmvConfig(null,null));
+                            },getEmvConfig(null,null),that);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
