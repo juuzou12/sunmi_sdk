@@ -46,14 +46,43 @@ public class SunmiReports {
 
     //get the total reports from the database
     public void statementReports() {
+        Gson gson = new Gson();
         new Thread(new Runnable() {
             @Override
             public void run() {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                Looper.prepare();
+                while (true) {
+                    if (SunmiSDK.app.emvOptV2 == null) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+                    break;
                 }
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Intent intent = new Intent();
+
+                            Reports.statementOfDay(new EMVListener() {
+                                @Override
+                                public void onEmvResult(EmvResult result) {
+                                    Log.e(TAG, "onEmvResult----------");
+                                    intent.putExtra("resp", gson.toJson(result));
+                                    ((Activity) that).setResult(RESULT_OK, intent);
+                                    ((Activity) that).finish();
+                                }
+                            },getEmvConfig(null,null),that);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                Looper.loop();
             }
         }).start();
     }
@@ -210,5 +239,46 @@ public class SunmiReports {
         }).start();
     }
 
-    //the statement of the day
+    //manual Settlement
+    public void manualSettlement(){
+        Gson gson = new Gson();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Looper.prepare();
+                while (true) {
+                    if (SunmiSDK.app.emvOptV2 == null) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+                    break;
+                }
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Intent intent = new Intent();
+                            TotalReportData totalReportData=new TotalReportData();
+                            Reports.totalReport(new EMVListener() {
+                                @Override
+                                public void onEmvResult(EmvResult result) {
+                                    Log.e(TAG, "onEmvResult----------");
+                                    intent.putExtra("resp", gson.toJson(result));
+                                    ((Activity) that).setResult(RESULT_OK, intent);
+                                    ((Activity) that).finish();
+                                }
+                            },getEmvConfig(null,null),that);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                Looper.loop();
+            }
+        }).start();
+    }
 }

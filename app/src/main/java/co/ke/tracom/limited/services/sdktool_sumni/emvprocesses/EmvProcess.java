@@ -89,6 +89,9 @@ public class EmvProcess {
             case "totalReport":
                 new SunmiReports(that,payload,emv).getTotalReports();
                 break;
+            case "manualSettlement":
+                new SunmiReports(that,payload,emv).manualSettlement();
+                break;
             default:
                 break;
         }
