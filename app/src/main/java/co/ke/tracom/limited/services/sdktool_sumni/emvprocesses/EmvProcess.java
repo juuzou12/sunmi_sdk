@@ -92,6 +92,9 @@ public class EmvProcess {
             case "manualSettlement":
                 new SunmiReports(that,payload,emv).manualSettlement();
                 break;
+F            case "Receipt reprint":
+                new SunmiReports(that,payload,emv).printReceiptReprint();
+                break;
             default:
                 break;
         }
@@ -152,6 +155,68 @@ public class EmvProcess {
                 Looper.loop();
             }
         }).start();
+    }
+
+    //do sale without card
+    public void doSaleWithoutCard(){
+        Gson gson = new Gson();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Looper.prepare();
+                while (true) {
+                    if (SunmiSDK.app.emvOptV2 == null) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+                    break;
+                }
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Intent intent = new Intent();
+                            emv.start(that, new EMVListener() {
+                                @Override
+                                public void onEmvResult(EmvResult result) {
+                                    Log.e(TAG, "onEmvResult----------");
+                                    intent.putExtra("resp", gson.toJson(result));
+                                    ((Activity) that).setResult(RESULT_OK, intent);
+                                    ((Activity) that).finish();
+                                }
+                            }, new CardStateEmitter() {
+                                @Override
+                                public void onInsertCard() {
+                                    Log.e(TAG, "onInsertCard----------");
+                                }
+
+                                @Override
+                                public void onCardInserted(CardType cardType) {
+                                    Log.e(TAG, "onCardInserted----------");
+                                }
+
+                                @Override
+                                public void onProcessingEmv() {
+                                    Log.e(TAG, "onProcessingEmv----------");
+                                }
+                            }, getEmvConfig(TransactionType.MANUAL_SALE,new SaleData()));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                Looper.loop();
+            }
+        }).start();
+    }
+
+    //pre-auth-without card information
+    public void doPreAuthWithoutCard(){
+
     }
 
     //get the balance of the card
@@ -752,4 +817,42 @@ public class EmvProcess {
             }
         }).start();
     }
+
+    //doVoid
+    public void doVoid(){
+        OtherData otherData = new OtherData(TransactionType.VOID_INQUIRY);
+        try {
+            otherData.setRrn(new JSONObject(payload).getString("invoiceNo") );
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        emv.queryBasedOnInvoices(new EMVListener() {
+            @Override
+            public void onEmvResult(EmvResult result) {
+                Log.d(LOG_TAG, result.toString());
+                intent.putExtra("resp", gson.toJson(result));
+                ((Activity) that).setResult(RESULT_OK, intent);
+                ((Activity) that).finish();
+            }
+        }, otherData);
+    }
+
+    public void doRefund(){
+        OtherData otherData = new OtherData(TransactionType.REFUND_INQUIRY);
+        try {
+            otherData.setRrn(new JSONObject(payload).getString("invoiceNo") );
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        emv.queryBasedOnInvoices(new EMVListener() {
+            @Override
+            public void onEmvResult(EmvResult result) {
+                Log.d(LOG_TAG, result.toString());
+                intent.putExtra("resp", gson.toJson(result));
+                ((Activity) that).setResult(RESULT_OK, intent);
+                ((Activity) that).finish();
+            }
+        }, otherData);
+    }
+
 }

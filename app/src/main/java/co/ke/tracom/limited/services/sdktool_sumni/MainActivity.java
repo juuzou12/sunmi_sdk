@@ -95,6 +95,18 @@ public class MainActivity extends AppCompatActivity {
                     case "Pre-authorize complete cancellation":
                         new EmvProcess(this,emvAction,payload).preAuthorizeCompleteCancellation();
                         break;
+                    case "Duplicate receipt":
+                        new SunmiReports(this,payload,emvAction).printReceiptReprint();
+                        break;
+                    case "void":
+                        new EmvProcess(this,emvAction,payload).doVoid();
+                        break;
+                    case "Refund with card":
+                        new EmvProcess(this,emvAction,payload).doRefund();
+                        break;
+                    case "sale without card":
+                        new EmvProcess(this,emvAction,payload).doSaleWithoutCard();
+                        break;
                 }
             }
         }

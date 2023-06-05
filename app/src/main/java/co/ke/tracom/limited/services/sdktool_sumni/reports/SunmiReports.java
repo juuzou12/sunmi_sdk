@@ -3,6 +3,8 @@ package co.ke.tracom.limited.services.sdktool_sumni.reports;
 import static android.app.Activity.RESULT_OK;
 import static android.content.ContentValues.TAG;
 
+import static org.jpos.iso.packager.LogPackager.LOG_TAG;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -22,6 +24,7 @@ import java.util.List;
 import ke.co.tracom.libsunmi.SunmiSDK;
 import ke.co.tracom.libsunmi.api.EmvConfig;
 import ke.co.tracom.libsunmi.api.TransactionType;
+import ke.co.tracom.libsunmi.api.transactionData.OtherData;
 import ke.co.tracom.libsunmi.api.transactionData.SaleData;
 import ke.co.tracom.libsunmi.api.transactionData.Settlement;
 import ke.co.tracom.libsunmi.card.EmvResult;
@@ -280,5 +283,69 @@ public class SunmiReports {
                 Looper.loop();
             }
         }).start();
+    }
+
+
+    //Receipt reprint
+    public void printReceiptReprint() {
+        Gson gson = new Gson();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Looper.prepare();
+                while (true) {
+                    if (SunmiSDK.app.emvOptV2 == null) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+                    break;
+                }
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Intent intent = new Intent();
+                            Reports.lastReceipt(new EMVListener() {
+                                @Override
+                                public void onEmvResult(EmvResult result) {
+                                    Log.e(TAG, "onEmvResult----------");
+                                    intent.putExtra("resp", gson.toJson(result));
+                                    ((Activity) that).setResult(RESULT_OK, intent);
+                                    ((Activity) that).finish();
+                                }
+                            },getEmvConfig(null,null),that);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                Looper.loop();
+            }
+        }).start();
+    }
+
+    //duplicate receipt
+    public void duplicateReceipt(){
+        OtherData otherData = new OtherData();
+        Intent intent = new Intent();
+        Gson gson = new Gson();
+        try {
+            otherData.setInvoiceNumber(new JSONObject(payload).getString("invoiceNo") );
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        emv.queryBasedOnInvoices(new EMVListener() {
+            @Override
+            public void onEmvResult(EmvResult result) {
+                Log.d(LOG_TAG, result.toString());
+                intent.putExtra("resp", gson.toJson(result));
+                ((Activity) that).setResult(RESULT_OK, intent);
+                ((Activity) that).finish();
+            }
+        }, otherData);
     }
 }
