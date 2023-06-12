@@ -31,10 +31,14 @@ import ke.co.tracom.libsunmi.api.transactionData.BalanceInquiry;
 import ke.co.tracom.libsunmi.api.transactionData.Cash;
 import ke.co.tracom.libsunmi.api.transactionData.OtherData;
 import ke.co.tracom.libsunmi.api.transactionData.PreAuthAdjust;
+import ke.co.tracom.libsunmi.api.transactionData.PreAuthCompletion;
 import ke.co.tracom.libsunmi.api.transactionData.PreAuthCompletionCancellation;
 import ke.co.tracom.libsunmi.api.transactionData.PreAuthData;
+import ke.co.tracom.libsunmi.api.transactionData.Refund;
+import ke.co.tracom.libsunmi.api.transactionData.Reversal;
 import ke.co.tracom.libsunmi.api.transactionData.SaleData;
 import ke.co.tracom.libsunmi.api.transactionData.SaleWithCashbackData;
+import ke.co.tracom.libsunmi.api.transactionData.Void;
 import ke.co.tracom.libsunmi.card.EmvResult;
 import ke.co.tracom.libsunmi.emv.EMVAction;
 import ke.co.tracom.libsunmi.enums.CardType;
@@ -92,8 +96,19 @@ public class EmvProcess {
             case "manualSettlement":
                 new SunmiReports(that,payload,emv).manualSettlement();
                 break;
-F            case "Receipt reprint":
+            case "Receipt reprint":
                 new SunmiReports(that,payload,emv).printReceiptReprint();
+                break;
+            case "Refund with card":
+                doRefundFinal();
+                break;
+            case "void":
+                doVoidFinal();
+                break;
+            case "Reversal":
+                doReversalFinal();
+            case "Pre-authorize complete cancellation after":
+                preAuthorizeCompleteCancellationAfter();
                 break;
             default:
                 break;
@@ -589,6 +604,8 @@ F            case "Receipt reprint":
         OtherData otherData = new OtherData(TransactionType.ADJUST);
         try {
             otherData.setInvoiceNumber(new JSONObject(payload).getString("invoiceNo") );
+            otherData.setProfileId(new JSONObject(payload).getString("profileID"));
+            otherData.setOtherAmount(new JSONObject(payload).getString("amount"));
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -704,7 +721,7 @@ F            case "Receipt reprint":
                     public void run() {
                         try {
                             Intent intent = new Intent();
-                            PreAuthAdjust preAuth=new PreAuthAdjust();
+                            PreAuthCompletion preAuth=new PreAuthCompletion();
                             preAuth.setAmount(new JSONObject(payload).getString("amount"));
                             emv.start(that, new EMVListener() {
                                 @Override
@@ -743,6 +760,24 @@ F            case "Receipt reprint":
     //Pre-authorize complete cancellation
     public void preAuthorizeCompleteCancellation(){
         OtherData otherData = new OtherData(TransactionType.PREAUTHORIZATION_COMPLETION_CANCELLETION);
+        try {
+            otherData.setRrn(new JSONObject(payload).getString("invoiceNo") );
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        emv.queryBasedOnInvoices(new EMVListener() {
+            @Override
+            public void onEmvResult(EmvResult result) {
+                Log.d(LOG_TAG, result.toString());
+                intent.putExtra("resp", gson.toJson(result));
+                ((Activity) that).setResult(RESULT_OK, intent);
+                ((Activity) that).finish();
+            }
+        }, otherData);
+    }
+
+    public void preAuthorizeCancellation(){
+        OtherData otherData = new OtherData(TransactionType.PREAUTHORIZATION_CANCELLATION);
         try {
             otherData.setRrn(new JSONObject(payload).getString("invoiceNo") );
         } catch (JSONException e) {
@@ -839,6 +874,197 @@ F            case "Receipt reprint":
 
     public void doRefund(){
         OtherData otherData = new OtherData(TransactionType.REFUND_INQUIRY);
+        try {
+            otherData.setRrn(new JSONObject(payload).getString("invoiceNo") );
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        emv.queryBasedOnInvoices(new EMVListener() {
+            @Override
+            public void onEmvResult(EmvResult result) {
+                Log.d(LOG_TAG, result.toString());
+                intent.putExtra("resp", gson.toJson(result));
+                ((Activity) that).setResult(RESULT_OK, intent);
+                ((Activity) that).finish();
+            }
+        }, otherData);
+    }
+
+    public void doRefundFinal(){
+        Gson gson = new Gson();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Looper.prepare();
+                while (true) {
+                    if (SunmiSDK.app.emvOptV2 == null) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+                    break;
+                }
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Intent intent = new Intent();
+                            Refund preAuth=new Refund();
+                            preAuth.setAmount(new JSONObject(payload).getString("amount"));
+                            emv.start(that, new EMVListener() {
+                                @Override
+                                public void onEmvResult(EmvResult result) {
+                                    Log.e(TAG, "onEmvResult----------");
+                                    intent.putExtra("resp", gson.toJson(result));
+                                    ((Activity) that).setResult(RESULT_OK, intent);
+                                    ((Activity) that).finish();
+                                }
+                            }, new CardStateEmitter() {
+                                @Override
+                                public void onInsertCard() {
+                                    Log.e(TAG, "onInsertCard----------");
+                                }
+
+                                @Override
+                                public void onCardInserted(CardType cardType) {
+                                    Log.e(TAG, "onCardInserted----------");
+                                }
+
+                                @Override
+                                public void onProcessingEmv() {
+                                    Log.e(TAG, "onProcessingEmv----------");
+                                }
+                            }, getEmvConfig(TransactionType.REFUND,preAuth));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                Looper.loop();
+            }
+        }).start();
+    }
+
+    public void doVoidFinal(){
+        Gson gson = new Gson();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Looper.prepare();
+                while (true) {
+                    if (SunmiSDK.app.emvOptV2 == null) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+                    break;
+                }
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Intent intent = new Intent();
+                            Void preAuth=new Void();
+                            preAuth.setAmount(new JSONObject(payload).getString("amount"));
+                            emv.start(that, new EMVListener() {
+                                @Override
+                                public void onEmvResult(EmvResult result) {
+                                    Log.e(TAG, "onEmvResult----------");
+                                    intent.putExtra("resp", gson.toJson(result));
+                                    ((Activity) that).setResult(RESULT_OK, intent);
+                                    ((Activity) that).finish();
+                                }
+                            }, new CardStateEmitter() {
+                                @Override
+                                public void onInsertCard() {
+                                    Log.e(TAG, "onInsertCard----------");
+                                }
+
+                                @Override
+                                public void onCardInserted(CardType cardType) {
+                                    Log.e(TAG, "onCardInserted----------");
+                                }
+
+                                @Override
+                                public void onProcessingEmv() {
+                                    Log.e(TAG, "onProcessingEmv----------");
+                                }
+                            }, getEmvConfig(TransactionType.VOID,preAuth));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                Looper.loop();
+            }
+        }).start();
+    }
+    public void doReversalFinal(){
+        Gson gson = new Gson();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Looper.prepare();
+                while (true) {
+                    if (SunmiSDK.app.emvOptV2 == null) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+                    break;
+                }
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Intent intent = new Intent();
+                            Reversal preAuth=new Reversal();
+                            preAuth.setAmount(new JSONObject(payload).getString("amount"));
+                            emv.start(that, new EMVListener() {
+                                @Override
+                                public void onEmvResult(EmvResult result) {
+                                    Log.e(TAG, "onEmvResult----------");
+                                    intent.putExtra("resp", gson.toJson(result));
+                                    ((Activity) that).setResult(RESULT_OK, intent);
+                                    ((Activity) that).finish();
+                                }
+                            }, new CardStateEmitter() {
+                                @Override
+                                public void onInsertCard() {
+                                    Log.e(TAG, "onInsertCard----------");
+                                }
+
+                                @Override
+                                public void onCardInserted(CardType cardType) {
+                                    Log.e(TAG, "onCardInserted----------");
+                                }
+
+                                @Override
+                                public void onProcessingEmv() {
+                                    Log.e(TAG, "onProcessingEmv----------");
+                                }
+                            }, getEmvConfig(TransactionType.REVERSAL,preAuth));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                Looper.loop();
+            }
+        }).start();
+    }
+
+    public void reversal(){
+        OtherData otherData = new OtherData(TransactionType.REVERSAL);
         try {
             otherData.setRrn(new JSONObject(payload).getString("invoiceNo") );
         } catch (JSONException e) {

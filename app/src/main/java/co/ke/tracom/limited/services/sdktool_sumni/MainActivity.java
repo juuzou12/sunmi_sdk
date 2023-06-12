@@ -68,6 +68,8 @@ public class MainActivity extends AppCompatActivity {
                         getSerialNumber(intent);
                         break;
                     case "doEmv":
+                    case "doReversal":
+                    case "doRefund":
                         try {
                             new EmvProcess(this,emvAction,payload).emvMainTrigger();
                         } catch (JSONException e) {
@@ -95,6 +97,9 @@ public class MainActivity extends AppCompatActivity {
                     case "Pre-authorize complete cancellation":
                         new EmvProcess(this,emvAction,payload).preAuthorizeCompleteCancellation();
                         break;
+                    case "pre-authorize-cancellation":
+                        new EmvProcess(this,emvAction,payload).preAuthorizeCancellation();
+                        break;
                     case "Duplicate receipt":
                         new SunmiReports(this,payload,emvAction).printReceiptReprint();
                         break;
@@ -107,6 +112,10 @@ public class MainActivity extends AppCompatActivity {
                     case "sale without card":
                         new EmvProcess(this,emvAction,payload).doSaleWithoutCard();
                         break;
+                    case"Reversal":
+                        new EmvProcess(this,emvAction,payload).reversal();
+                        break;
+
                 }
             }
         }
