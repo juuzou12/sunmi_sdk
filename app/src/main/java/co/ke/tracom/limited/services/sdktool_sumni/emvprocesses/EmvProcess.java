@@ -21,6 +21,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.text.ParseException;
 
 import co.ke.tracom.limited.services.sdktool_sumni.reports.SunmiReports;
 import ke.co.tracom.libsunmi.SunmiSDK;
@@ -29,6 +30,7 @@ import ke.co.tracom.libsunmi.api.TransactionType;
 import ke.co.tracom.libsunmi.api.transactionData.Adjust;
 import ke.co.tracom.libsunmi.api.transactionData.BalanceInquiry;
 import ke.co.tracom.libsunmi.api.transactionData.Cash;
+import ke.co.tracom.libsunmi.api.transactionData.ManualData;
 import ke.co.tracom.libsunmi.api.transactionData.OtherData;
 import ke.co.tracom.libsunmi.api.transactionData.PreAuthAdjust;
 import ke.co.tracom.libsunmi.api.transactionData.PreAuthCompletion;
@@ -40,6 +42,7 @@ import ke.co.tracom.libsunmi.api.transactionData.SaleData;
 import ke.co.tracom.libsunmi.api.transactionData.SaleWithCashbackData;
 import ke.co.tracom.libsunmi.api.transactionData.Void;
 import ke.co.tracom.libsunmi.card.EmvResult;
+import ke.co.tracom.libsunmi.cardless.Manual;
 import ke.co.tracom.libsunmi.emv.EMVAction;
 import ke.co.tracom.libsunmi.enums.CardType;
 import ke.co.tracom.libsunmi.interfaces.CardStateEmitter;
@@ -110,6 +113,10 @@ public class EmvProcess {
             case "Pre-authorize complete cancellation after":
                 preAuthorizeCompleteCancellationAfter();
                 break;
+            case "Sale without card- Supervisor":
+            case "Sale without card":
+                doSaleWithoutCard();
+                break;
             default:
                 break;
         }
@@ -175,6 +182,9 @@ public class EmvProcess {
     //do sale without card
     public void doSaleWithoutCard(){
         Gson gson = new Gson();
+        EmvConfig config = getEmvConfig(TransactionType.SALE, new SaleData());
+        Manual manual = new Manual();
+
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -190,43 +200,25 @@ public class EmvProcess {
                     }
                     break;
                 }
+
                 new Handler(Looper.getMainLooper()).post(new Runnable() {
                     @Override
                     public void run() {
                         try {
-                            Intent intent = new Intent();
-                            emv.start(that, new EMVListener() {
+                            manual.doManualTransaction(that, new EMVListener() {
                                 @Override
                                 public void onEmvResult(EmvResult result) {
-                                    Log.e(TAG, "onEmvResult----------");
-                                    intent.putExtra("resp", gson.toJson(result));
-                                    ((Activity) that).setResult(RESULT_OK, intent);
-                                    ((Activity) that).finish();
+                                    System.out.println(result.toString());
                                 }
-                            }, new CardStateEmitter() {
-                                @Override
-                                public void onInsertCard() {
-                                    Log.e(TAG, "onInsertCard----------");
-                                }
-
-                                @Override
-                                public void onCardInserted(CardType cardType) {
-                                    Log.e(TAG, "onCardInserted----------");
-                                }
-
-                                @Override
-                                public void onProcessingEmv() {
-                                    Log.e(TAG, "onProcessingEmv----------");
-                                }
-                            }, getEmvConfig(TransactionType.MANUAL_SALE,new SaleData()));
-                        } catch (Exception e) {
+                            },config, new OtherData());
+                        } catch (ISOException | IOException | ParseException | RemoteException e) {
                             e.printStackTrace();
                         }
                     }
                 });
                 Looper.loop();
             }
-        }).start();
+        });
     }
 
     //pre-auth-without card information
@@ -1080,5 +1072,6 @@ public class EmvProcess {
             }
         }, otherData);
     }
+
 
 }

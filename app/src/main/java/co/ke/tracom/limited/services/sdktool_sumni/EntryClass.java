@@ -16,8 +16,5 @@ public class EntryClass extends Application {
 
         SunmiSDK.app.init(getApplicationContext());
 
-        EMVAction emvAction= new EMVAction(getApplicationContext());
-        emvAction.initData();
-
     }
 }

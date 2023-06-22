@@ -109,9 +109,6 @@ public class MainActivity extends AppCompatActivity {
                     case "Refund with card":
                         new EmvProcess(this,emvAction,payload).doRefund();
                         break;
-                    case "sale without card":
-                        new EmvProcess(this,emvAction,payload).doSaleWithoutCard();
-                        break;
                     case"Reversal":
                         new EmvProcess(this,emvAction,payload).reversal();
                         break;
