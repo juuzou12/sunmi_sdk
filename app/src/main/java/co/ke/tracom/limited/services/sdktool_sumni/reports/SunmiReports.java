@@ -28,6 +28,7 @@ import ke.co.tracom.libsunmi.api.transactionData.OtherData;
 import ke.co.tracom.libsunmi.api.transactionData.SaleData;
 import ke.co.tracom.libsunmi.api.transactionData.Settlement;
 import ke.co.tracom.libsunmi.card.EmvResult;
+import ke.co.tracom.libsunmi.cardless.Manual;
 import ke.co.tracom.libsunmi.db.Reports;
 import ke.co.tracom.libsunmi.emv.EMVAction;
 import ke.co.tracom.libsunmi.enums.CardType;
@@ -265,8 +266,9 @@ public class SunmiReports {
                     public void run() {
                         try {
                             Intent intent = new Intent();
-                            TotalReportData totalReportData=new TotalReportData();
-                            Reports.totalReport(new EMVListener() {
+                            Settlement settlement=new Settlement();
+                            Manual manual = new Manual();
+                            manual.doManualSettlement(that, new EMVListener() {
                                 @Override
                                 public void onEmvResult(EmvResult result) {
                                     Log.e(TAG, "onEmvResult----------");
@@ -274,7 +276,7 @@ public class SunmiReports {
                                     ((Activity) that).setResult(RESULT_OK, intent);
                                     ((Activity) that).finish();
                                 }
-                            },getEmvConfig(null,null),that);
+                            },getEmvConfig(TransactionType.SETTLEMENT, settlement));
                         } catch (Exception e) {
                             e.printStackTrace();
                         }

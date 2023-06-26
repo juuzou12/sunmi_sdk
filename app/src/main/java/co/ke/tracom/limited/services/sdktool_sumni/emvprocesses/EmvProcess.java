@@ -82,6 +82,7 @@ public class EmvProcess {
                 doCashAdvanced();
                 break;
             case "Sale with cashback":
+            case "Sale with tip":
                 saleWithCashBack();
                 break;
             case "Mini-statement":
@@ -113,7 +114,6 @@ public class EmvProcess {
             case "Pre-authorize complete cancellation after":
                 preAuthorizeCompleteCancellationAfter();
                 break;
-            case "Sale without card- Supervisor":
             case "Sale without card":
                 doSaleWithoutCard();
                 break;
@@ -184,46 +184,6 @@ public class EmvProcess {
         Gson gson = new Gson();
         EmvConfig config = getEmvConfig(TransactionType.SALE, new SaleData());
         Manual manual = new Manual();
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Looper.prepare();
-                while (true) {
-                    if (SunmiSDK.app.emvOptV2 == null) {
-                        try {
-                            Thread.sleep(500);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        continue;
-                    }
-                    break;
-                }
-
-                new Handler(Looper.getMainLooper()).post(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            manual.doManualTransaction(that, new EMVListener() {
-                                @Override
-                                public void onEmvResult(EmvResult result) {
-                                    System.out.println(result.toString());
-                                }
-                            },config, new OtherData());
-                        } catch (ISOException | IOException | ParseException | RemoteException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
-                Looper.loop();
-            }
-        });
-    }
-
-    //pre-auth-without card information
-    public void doPreAuthWithoutCard(){
-
     }
 
     //get the balance of the card
