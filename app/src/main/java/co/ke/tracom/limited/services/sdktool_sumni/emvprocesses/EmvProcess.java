@@ -114,7 +114,7 @@ public class EmvProcess {
             case "Pre-authorize complete cancellation after":
                 preAuthorizeCompleteCancellationAfter();
                 break;
-            case "Sale without card":
+            case "Sale without card- Supervisor":
                 doSaleWithoutCard();
                 break;
             default:
@@ -182,8 +182,34 @@ public class EmvProcess {
     //do sale without card
     public void doSaleWithoutCard(){
         Gson gson = new Gson();
-        EmvConfig config = getEmvConfig(TransactionType.SALE, new SaleData());
+        EmvConfig config = getEmvConfig(TransactionType.MANUAL_SALE, new SaleData());
         Manual manual = new Manual();
+        OtherData otherData = new OtherData();
+        try {
+            otherData.setCvv(new JSONObject(payload).getString("cvv"));
+            otherData.setCardNumber(new JSONObject(payload).getString("cardNo"));
+            otherData.setExpDate(new JSONObject(payload).getString("expDate"));
+            otherData.setOtherAmount(new JSONObject(payload).getString("amount"));
+            otherData.setProfileId(new JSONObject(payload).getString("profileID"));
+            otherData.setTid(new JSONObject(payload).getString("tid"));
+            otherData.setMid(new JSONObject(payload).getString("mid"));
+            otherData.setIp(new JSONObject(payload).getString("ip"));
+            otherData.setPort(Integer.parseInt(new JSONObject(payload).getString("port")));
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        try {
+            manual.doManualTransaction(that, new EMVListener() {
+                @Override
+                public void onEmvResult(EmvResult result) {
+                    intent.putExtra("resp", gson.toJson(result));
+                    ((Activity) that).setResult(RESULT_OK, intent);
+                    ((Activity) that).finish();
+                }
+            },config,otherData);
+        } catch (ISOException | IOException | RemoteException | ParseException e) {
+            e.printStackTrace();
+        }
     }
 
     //get the balance of the card
